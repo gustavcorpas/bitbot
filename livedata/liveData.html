@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <!-- <script async src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js" charset="utf-8"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.js" charset="utf-8"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script> -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <link href="https://fonts.googleapis.com/css?family=Nunito:400,700&display=swap" rel="stylesheet">
+    <title>live data</title>
+  </head>
+  <body>
+
+    <div class="wrap">
+
+      <div class="block">
+        <center>
+          <h1>online bot</h1>
+          <p id="datalength" class="bold">___</p> <p>handler</p>
+          <div class="container">
+            <canvas id="canvasPanel" width="100" height="20"></canvas>
+          </div>
+        </center>
+        <center>
+          <h3>Antal handler at vise:</h3>
+          <form id="submit-form" class="" action="/" method="post">
+            <input type="number" name="amount" value="20"/>
+            <button id="submitter" type="submit" name="button">Vis!</button>
+          </form>
+
+        </center>
+
+      </div>
+
+    </div>
+
+  </body>
+
+  <script type="text/javascript">
+  let config = {
+    type: 'line',
+    options: {
+              elements: {
+                  point:{
+                      radius: 0
+                  }
+              }
+          },
+    data: {
+      labels: [],
+      datasets: [{
+        label: '',
+        backgroundColor: '#b75b4d',
+        borderColor: '#b75b4d',
+        data: [],
+        fill: false,
+      }],
+    },
+  };
+
+  window.onload = async function() {
+
+    let form = document.querySelector('#submit-form');
+    let input = form.querySelector('input');
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      retrieveData(input.value);
+    });
+
+    Chart.defaults.global.defaultFontColor = '#333';
+
+    console.log('http://localhost:3001/alldata/'+input.value);
+    let data = await axios.get('localhost:3001/bitbot/alldata/'+input.value);
+    let currentPrice = data.data.graph[data.data.graph.length-1].price;
+
+    let graphdata = data.data.graph;
+    let name = data.data.name;
+
+    document.querySelector('#datalength').innerText = graphdata.length;
+
+
+    config.data.datasets[0].data = graphdata.map(g => g.sum);
+    config.data.datasets[0].label = name;
+    config.data.labels = graphdata.map((g, index) => {
+      let date = new Date(g.trade.timestamp);
+      return date.toLocaleString('da-DK', {dateStyle: 'long', timeStyle: 'short'});
+      // return `${date.getDate()}/${date.getMonth() +1} ${("0" + date.getMinutes()).substr(-2)}:${date.getMinutes()}`
+    });
+    config.data.datasets[0].backgroundColor = 'gray';
+    config.data.datasets[0].borderColor = 'gray';
+
+    var ctx = document.getElementById('canvasPanel').getContext('2d');
+    window.myLine = new Chart(ctx, config);
+
+  }
+
+  async function retrieveData(amount){
+
+    let data = await axios.get('localhost:3001/bitbot/alldata/'+amount);
+
+    let graphdata = data.data.graph;
+    let name = data.data.name;
+
+    document.querySelector('#datalength').innerText = graphdata.length;
+
+
+    config.data.datasets[0].data = graphdata.map(g => g.sum);
+    config.data.datasets[0].label = name;
+    config.data.labels = graphdata.map((g, index) => {
+      let date = new Date(g.trade.timestamp);
+      return date.toLocaleString('da-DK', {dateStyle: 'long', timeStyle: 'short'});
+      // return `${date.getDate()}/${date.getMonth() +1} ${("0" + date.getMinutes()).substr(-2)}:${date.getMinutes()}`
+    });
+
+    if(window.myLine){
+      window.myLine.update();
+    }
+
+  }
+  </script>
+</html>
+
+
+<style>
+*{
+  font-family: 'Nunito', sans-serif;
+  color: #333;
+}
+body{
+  margin: 0;
+  padding: 0;
+  margin-bottom: 200px;
+  background-color: #eee;
+}
+h1{
+  color: #27b091;
+}
+p{
+  display: inline;
+}
+.bold{
+  font-weight: bold;
+}
+.wrap{
+  max-width: 1500px;
+  margin: auto;
+  padding: 20px;
+
+}
+.block{
+  padding: 50px;
+  margin: 20px;
+  background-color: #efefef;
+}
+
+table {
+  border-collapse: collapse;
+  padding: 10px;
+  border-radius: 2px;
+  margin: 20px;
+  width: 500px;
+}
+input {
+  width: 400px;
+  padding: 12px 20px;
+  margin: 8px 0;
+  box-sizing: border-box;
+  text-align: center;
+}
+/* Chrome, Safari, Edge, Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
+}
+
+td, th {
+  text-align: left;
+  padding: 6px;
+}
+td{
+
+}
+th{
+  font-weight: bold;
+  font-size: 18px;
+}
+tr:nth-child(even){
+  background-color: #2e2e2e;
+}
+tr>td:nth-of-type(4)::after, tr>td:nth-of-type(5)::after{
+  content: '%';
+}
+tr>td:nth-of-type(3)::after{
+  content: '$';
+}
+ul{
+
+  text-align: left;
+}
+</style>

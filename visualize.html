@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <!-- <script async src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js" charset="utf-8"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.js" charset="utf-8"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script> -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <link href="https://fonts.googleapis.com/css?family=Nunito:400,700&display=swap" rel="stylesheet">
+    <title>Graph</title>
+  </head>
+  <body>
+    <div class="wrap">
+
+      <div class="block">
+        <center>
+          <h1>Det totale dataset</h1>
+          <p id="datalength" class="bold">___</p> <p>datapunkter</p>
+          <div class="container">
+            <canvas id="canvasPanel" width="100" height="20"></canvas>
+          </div>
+        </center>
+
+      </div>
+
+
+      <div class="block">
+        <center><h1>Højest scorende strategier</h1></center>
+        <div class="container">
+          <canvas id="canvasPanel2" width="100" height="20"></canvas>
+        </div>
+        <center>
+          <table id="heighest-table">
+            <tr>
+              <th>Navn</th>
+              <th>Trades</th>
+              <th>Profit / $</th>
+              <th>Profit / %</th>
+              <th>Profit / trade</th>
+            </tr>
+          </table>
+        </center>
+      </div>
+
+      <div class="block">
+        <center><h1>Lavest scorende strategier</h1></center>
+        <div class="container">
+          <canvas id="canvasPanel3" width="100" height="20"></canvas>
+        </div>
+        <center>
+          <table id="lowest-table">
+            <tr>
+              <th>Navn</th>
+              <th>Trades</th>
+              <th>Profit / $</th>
+              <th>Profit / %</th>
+              <th>Profit / trade</th>
+            </tr>
+          </table>
+        </center>
+      </div>
+
+
+    </div>
+
+  </body>
+
+  <script>
+
+    let config = {
+    	type: 'line',
+      options: {
+                elements: {
+                    point:{
+                        radius: 0
+                    }
+                }
+            },
+    	data: {
+    		labels: [],
+    		datasets: [{
+          label: '',
+          backgroundColor: '#b75b4d',
+          borderColor: '#b75b4d',
+          data: [],
+          fill: false,
+        }],
+    	},
+    };
+
+    window.onload = async function() {
+      Chart.defaults.global.defaultFontColor = '#ccc';
+
+      let data = await axios.get('http://localhost:3000/data');
+
+      let currentPrice = data.data[data.data.length-1].askPrice;
+
+      let graphdata = data.data;
+      let name = 'Whole dataset (ignoring nochange values)';
+
+      document.querySelector('#datalength').innerText = graphdata.length;
+
+
+      config.data.datasets[0].data = graphdata.map(g => g.askPrice);
+      config.data.datasets[0].label = name;
+      config.data.labels = graphdata.map((g, index) => index);
+      config.data.datasets[0].backgroundColor = 'gray';
+      config.data.datasets[0].borderColor = 'gray';
+
+      var ctx = document.getElementById('canvasPanel').getContext('2d');
+      window.myLine = new Chart(ctx, config);
+
+      (async () => {
+
+        let data = await axios.get('http://localhost:3000/highest');
+
+        let config2 = {
+        	type: 'line',
+          options: {
+                    elements: {
+                        point:{
+                            radius: 0
+                        }
+                    }
+                },
+        	data: {
+        		labels: [],
+        		datasets: [],
+        	},
+        };
+
+        config2.data.labels = data.data[0].graph.map((g, index) => index);
+        let colors = ['#3366E6', '#999966', '#99FF99', '#B34D4D',
+		  '#80B300', '#809900', '#E6B3B3', '#6680B3', '#66991A',
+		  '#FF99E6', '#CCFF1A', '#FF1A66', '#E6331A', '#33FFCC',
+		  '#66994D', '#B366CC', '#4D8000', '#B33300', '#CC80CC',
+		  '#66664D', '#991AFF', '#E666FF', '#4DB3FF', '#1AB399',
+		  '#E666B3', '#33991A', '#CC9999', '#B3B31A', '#00E680',
+		  '#4D8066', '#809980', '#E6FF80', '#1AFF33', '#999933',
+		  '#FF3380', '#CCCC00', '#66E64D', '#4D80CC', '#9900B3',
+		  '#E64D66', '#4DB380', '#FF4D4D', '#99E6E6', '#6666FF'];
+
+
+        let heighest_table = document.querySelector('#heighest-table');
+        for(let i in data.data){
+
+          let strategy = data.data[i].strategy;
+          let graphdata = data.data[i].graph;
+          let trades = data.data[i].trades;
+
+
+          makeTableRow(heighest_table, [{
+            strategy,
+            trades,
+            totalProfit: graphdata[graphdata.length -1],
+            percentProfit: (graphdata[graphdata.length -1] / currentPrice).toFixed(2),
+            pertradeProfit: (graphdata[graphdata.length -1] / (currentPrice * graphdata.length)).toFixed(5),
+          }]);
+          let row = heighest_table.querySelectorAll('tr:last-of-type');
+          row[0].style.borderLeft = '5px solid ' + colors[i];
+
+          config2.data.datasets.push({
+      			label: strategy,
+      			backgroundColor: colors[i],
+      			borderColor: colors[i],
+      			data: graphdata,
+      			fill: false,
+      		});
+        }
+
+
+
+
+
+      	var ctx = document.getElementById('canvasPanel2').getContext('2d');
+      	window.myLine = new Chart(ctx, config2);
+      })();
+
+
+      (async () => {
+
+        let data = await axios.get('http://localhost:3000/lowest');
+
+        let config2 = {
+          type: 'line',
+          options: {
+                    elements: {
+                        point:{
+                            radius: 0
+                        }
+                    }
+                },
+          data: {
+            labels: [],
+            datasets: [],
+          },
+        };
+
+        config2.data.labels = data.data[0].graph.map((g, index) => index);
+        let colors = ['#FF6633', '#FFB399', '#FF33FF', '#FFFF99', '#00B3E6', '#E6B333'];
+
+        let lowest_table = document.querySelector('#lowest-table');
+        for(let i in data.data){
+
+          let strategy = data.data[i].strategy;
+          let graphdata = data.data[i].graph;
+          let trades = data.data[i].trades;
+
+          makeTableRow(lowest_table, [{
+            strategy,
+            trades,
+            totalProfit: graphdata[graphdata.length -1],
+            percentProfit: (graphdata[graphdata.length -1] / currentPrice).toFixed(2),
+            pertradeProfit: (graphdata[graphdata.length -1] / (currentPrice * graphdata.length)).toFixed(5),
+          }]);
+          let row = lowest_table.querySelectorAll('tr:last-of-type');
+          row[0].style.borderLeft = '5px solid ' + colors[i];
+
+          config2.data.datasets.push({
+            label: strategy,
+            backgroundColor: colors[i],
+            borderColor: colors[i],
+            data: graphdata,
+            fill: false,
+          });
+        }
+
+
+
+        var ctx = document.getElementById('canvasPanel3').getContext('2d');
+        window.myLine = new Chart(ctx, config2);
+      })();
+
+    };
+
+    function makeTableRow(table, data) {
+      for (let element of data) {
+        let row = table.insertRow();
+        for (key in element) {
+          let cell = row.insertCell();
+          let text = document.createTextNode(element[key]);
+          cell.appendChild(text);
+        }
+      }
+    }
+
+
+  </script>
+
+  <style>
+  *{
+    font-family: 'Nunito', sans-serif;
+    color: #ccc;
+  }
+  body{
+    margin: 0;
+    padding: 0;
+    margin-bottom: 200px;
+    background-color: #222;
+  }
+  h1{
+    color: #27b091;
+  }
+  p{
+    display: inline;
+  }
+  .bold{
+    font-weight: bold;
+  }
+  .wrap{
+    max-width: 1000px;
+    margin: auto;
+    padding: 20px;
+
+  }
+  .block{
+    padding: 50px;
+    margin: 20px;
+    background-color: #292929;
+  }
+
+  table {
+    border-collapse: collapse;
+    padding: 10px;
+    border-radius: 2px;
+    margin: 20px;
+    width: 500px;
+  }
+
+  td, th {
+    text-align: left;
+    padding: 6px;
+  }
+  td{
+
+  }
+  th{
+    font-weight: bold;
+    font-size: 18px;
+  }
+  tr:nth-child(even){
+    background-color: #2e2e2e;
+  }
+  tr>td:nth-of-type(4)::after, tr>td:nth-of-type(5)::after{
+    content: '%';
+  }
+  tr>td:nth-of-type(3)::after{
+    content: '$';
+  }
+  ul{
+
+    text-align: left;
+  }
+  </style>
+</html>
